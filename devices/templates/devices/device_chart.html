@@ -1,0 +1,126 @@
+{% extends 'devices/base_template.html' %}
+{% load fw_tags %}
+{% load static %}
+{% load tz %}
+
+{% block page_title%}
+    <a class="blog-header-logo text-light" href="{% url 'device_graph' device.pk %}?{% param_replace params %}">Устройство {{ device.name }}</a>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="{% static 'bootstrap_datepicker_plus/js/datepicker-widget.js' %}"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.css">
+    <link rel="stylesheet" href="{% static 'bootstrap_datepicker_plus/css/datepicker-widget.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container noprint">
+        {{ form.media }}            {# Adds date-picker required JS and CSS #}
+            <div class="row">
+        <form method="post" action="{% url 'device_graph' device.pk %}" class="row">
+            {% csrf_token %}
+                <div class='col-sm-2'>
+                    Диапазон с:
+                </div>
+                <div class='col-sm-3'>
+                    <div class="form-group">
+                        <div class='input-group date' id='datetimepicker1'>
+                            <input type='text' class="form-control" name="from_date" value="{{ from_date }}"/>
+                            <span class="input-group-addon btn btn-primary">
+                                <span class="fas fa-calendar-alt"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class='col-sm-1'>
+                    До :
+                </div>
+                <div class='col-sm-3'>
+                    <div class="form-group">
+                        <div class='input-group date' id='datetimepicker2'>
+                            <input type='text' class="form-control" name="end_date" value="{{ end_date }}"/>
+                            <span class="input-group-addon btn btn-primary">
+                                <span class="fas fa-calendar-alt"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class='col-sm-3'>
+                    <button class="btn btn_main" type="submit"><i class="fas fa-filter"></i></button>
+                    <button class="btn btn_main" formaction="{% url 'list_values' device.pk %}"><i class="fas fa-table"></i></button>
+                    <button class="btn btn_main" type="button" onclick="moveBack()"><i class="fas fa-backward"></i></button>
+                    <button class="btn btn_main" type="button" onclick="printit()"><i class="fas fa-print"></i></button>
+                </div>
+
+
+        </form>
+                </div>
+    </div>
+    <script type="text/javascript">
+            $(function () {
+                $('#datetimepicker1').datetimepicker();
+                $('#datetimepicker2').datetimepicker();
+            });
+    </script>
+    <canvas id="myChart" width="500" height="350"></canvas>
+<script>
+var ctx = document.getElementById('myChart').getContext('2d');
+var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [{{ labels|safe  }}],
+        datasets: [{
+            label: 'Температура',
+            data: [{{ temperature|safe  }}],
+            backgroundColor: [
+                'rgba(179,39,53,0.3)',
+            ],
+            borderColor: [
+                'rgb(255,22,56)',
+            ],
+            borderWidth: 1
+        },
+        {
+            label: 'Влажность %',
+            data: [{{ humidity|safe  }}],
+            backgroundColor: [
+                'rgba(68,112,179,0.3)',
+            ],
+            borderColor: [
+                'rgb(72,76,255)',
+            ],
+            borderWidth: 1
+        },
+        ]
+    },
+    options: {
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: false
+                }
+            }]
+        }
+    }
+});
+</script>
+<script language="Javascript">
+            function printit(){
+                window.print() ;
+            }
+            function printit2(){
+                window.print() ;
+                window.close();
+            }
+            function moveBack(){
+                if(window.history.length>1){
+                    window.history.go(-1);
+                } else {
+                    window.close();
+                }
+                return false;
+            }
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends 'devices/base_template.html' %}
+{% load fw_tags %}
+{% load static %}
+{% load tz %}
+
+{% block page_title%}
+    <a class="blog-header-logo text-light" href="{% url 'list_devices' %}?{% param_replace params %}">Состояние устройств</a>
+{% endblock %}
+
+
+{% block content %}
+    <div class="container">
+    <div class="row py-2">
+        <div class="col-3">
+            Время обновления
+        </div>
+        <div class="col-3">
+            <select onchange="data_refresh(value,'{% url 'ajax_list_devices'%}', {'page':'{{ page_num}}',
+                'per_page':'{{ per_page}}'})">
+                 <option value="-1">Нет</option>
+                 <option value="10000">10 сек</option>
+                 <option value="60000">1 мин</option>
+                 <option value="300000">5 мин</option>
+                 <option value="600000">10 мин</option>
+                 <option value="3600000">1 час</option>
+             </select>
+        </div>
+    </div>
+    </div>
+
+<div class="container">
+    <div class="row py-2">
+        {% for device in devices %}
+        <div class="col" device-data-id="{{device.id}}">
+            <div class="alert
+            {% if not device.is_online %} alert-secondary
+            {% elif device.humidity_status == 0 and device.temperature_status == 0 %} alert-success
+            {% elif device.humidity_status == 1 or device.temperature_status == 1 %} alert-warning
+            {% elif device.humidity_status == 2 or device.temperature_status == 2 %} alert-warning
+            {% elif device.humidity_status == 3 or device.temperature_status == 3 %} alert-danger
+            {% elif device.humidity_status == 4 or device.temperature_status == 4 %} alert-danger
+            {% endif %}
+            " role="alert">
+                <h4 class="alert-heading">{{device.name}}</h4>
+                <p device-data-temperature>{{device.last_temperature|default_if_none:"--"}} °C
+                    {% if device.temperature_status == 1%}
+                        <i class="far fa-bell"></i><i class="fas fa-temperature-low"></i>
+                    {% elif device.temperature_status == 2%}
+                        <i class="far fa-bell"></i><i class="fas fa-temperature-high"></i>
+                    {% elif device.temperature_status == 3%}
+                        <i class="fas fa-exclamation-triangle"></i><i class="fas fa-temperature-low"></i>
+                    {% elif device.temperature_status == 4%}
+                        <i class="fas fa-exclamation-triangle"></i><i class="fas fa-temperature-high"></i>
+                    {% endif %}
+                </p>
+                <p device-data-humidity>{{device.last_humidity|default_if_none:"--"}} %
+                    {% if device.humidity_status == 1 or device.humidity_status == 2 %}
+                        <i class="far fa-bell"></i>
+                    {% elif device.humidity_status == 3 or device.humidity_status == 4 %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% endif %}
+                </p>
+                <p device-data-signal>{{device.signal|default_if_none:"--"}}дБ</p>
+                <hr>
+                <p class="mb-0">{{device.device_id}}</p>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-6">
+                    {% if device.is_online %}
+                        {{device.date_of_modify|localtime|default_if_none:"--"}}
+                    {% else %}
+                        {{device.last_on_line|localtime|default_if_none:"--"}}
+                    {% endif %}
+                    </div>
+                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_info' device.pk %}"><i class="fas fa-info"></i></a></div>
+                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_graph' device.pk %}"><i class="fas fa-chart-bar"></i></a></div>
+                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'list_values' device.pk %}"><i class="fas fa-table"></i></a></div>
+                </div>
+            </div>
+            </div>
+        </div>
+    {% empty %}
+            <div>Нет данных</div>
+        {% endfor %}
+    </div>
+</div>
+
+
+{% paging_navigation page params %}
+<script src="{% static 'devices/base.js' %}"></script>
+{% endblock %}

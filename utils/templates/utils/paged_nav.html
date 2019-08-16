@@ -1,0 +1,42 @@
+{% load fw_tags %}
+{% if page %}
+    <nav aria-label="Page navigation">
+    {% if page.has_other_pages %}
+        <ul class="pagination justify-content-center">
+
+            {% if page.has_previous %}
+                <li class="page-item"><a  class="page-link" href="?{% param_replace param page=1 %}">&laquo;</a></li>
+                <li class="page-item waves-effect"><a href="?{% param_replace param page=page.previous_page_number %}">
+                    <i class="material-icons page-link">Назад</i></a></li>
+            {% else %}
+                <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">&laquo;</a></li>
+                <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Назад</a></li>
+            {% endif %}
+
+            {% for num in page_range %}
+                {% if page.number == num %}
+                    <li class="page-item active"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">{{ num }} <span class="sr-only">(current)</span></a></li>
+                {% else %}
+                    <li class="page-item waves-effect"><a class="page-link"
+                            href="?{% param_replace param page=num %}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page.has_next %}
+                <li class="page-item waves-effect"><a class="page-link"
+                        href="?{% param_replace param page=page.next_page_number %}">
+                            <i class="material-icons">Вперед</i></a></li>
+                <li class="page-item"><a  class="page-link" href="?{% param_replace param page=page.paginator.num_pages %}">&raquo;</a></li>
+            {% else %}
+                <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Вперед</a></li>
+                <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">&raquo;</a></li>
+            {% endif %}
+
+            {% if show_page_info %}
+                <li class="paginator-item paginator-item-total page-item page-link"> Страница {{ page.number }} из {{ page.paginator.num_pages }}.</li>
+            {% endif %}
+        </ul>
+    {% endif %}
+
+    </nav>
+{% endif %}

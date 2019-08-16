@@ -1,0 +1,135 @@
+{% extends 'devices/base_template.html' %}
+{% load fw_tags %}
+{% load static %}
+{% load tz %}
+
+{% block page_title%}
+    <a class="blog-header-logo text-light" href="{% url 'list_devices' %}?{% param_replace params %}">Список устройств</a>
+{% endblock %}
+
+
+{% block content %}
+    <div class="container">
+    <form method="post">
+    {% csrf_token %}
+    <div class="row py-2">
+        <div class="col-3">
+            Устройств на страницу
+        </div>
+        <div class="col-3">
+             <!--<select name='per_page' onchange="set_per_page(value)"> -->
+             <select name='per_page'>
+                 {% for index in per_page_values %}
+                        <option value="{{index}}" {% if index == page_count %} selected {% endif %}>
+                            {{index}}
+                        </option>
+                 {% endfor %}
+             </select>
+        </div>
+        <div class="col-3">
+            Время обновления
+        </div>
+        <div class="col-3">
+            <select onchange="data_refresh(value,'{% url 'ajax_list_devices'%}', {'page':'{{ page_num}}',
+                'per_page':'{{ per_page}}'})">
+                 <option value="-1">Нет</option>
+                 <option value="10000">10 сек</option>
+                 <option value="60000">1 мин</option>
+                 <option value="300000">5 мин</option>
+                 <option value="600000">10 мин</option>
+                 <option value="3600000">1 час</option>
+             </select>
+        </div>
+    </div>
+    <div class="row py-2">
+        <div class="col-2">
+            Название
+        </div>
+        <div class="col-2">
+            <input name="name" value="{{ params.name }}"/>
+        </div>
+        <div class="col-2">
+        </div>
+        <div class="col-2">
+            Идентификатор
+        </div>
+        <div class="col-2">
+            <input name="id" value="{{ params.id }}"/>
+        </div>
+        <div class="col-2">
+            <input type="submit" value="FILTER">
+        </div>
+    </div>
+    </form>
+    </div>
+<table class="table">
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Название</th>
+      <th scope="col">ИД устройства</th>
+      <th scope="col">Он-лайн</th>
+      <th scope="col">Мощность сигнала</th>
+      <th scope="col">Температура</th>
+      <th scope="col">Влажность</th>
+      <th scope="col">Реле</th>
+      <th scope="col">Время последней активности</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for device in devices %}
+
+        <tr device-data-id="{{device.id}}" class="alert 
+            {% if not device.is_online %} alert-secondary
+            {% elif device.humidity_status == 0 and device.temperature_status == 0 %} alert-success
+            {% elif device.humidity_status == 1 or device.temperature_status == 1 %} alert-warning
+            {% elif device.humidity_status == 2 or device.temperature_status == 2 %} alert-warning
+            {% elif device.humidity_status == 3 or device.temperature_status == 3 %} alert-danger
+            {% elif device.humidity_status == 4 or device.temperature_status == 4 %} alert-danger
+            {% endif %}
+            ">
+        <th scope="row" >{{ forloop.counter }}</th>
+        <td device-data-name>{{device.name}}</td>
+        <td device-data-device_id>{{device.device_id}}</td>
+        <td device-data-on_line>
+            {% if device.is_online %}
+                <i class="fas fa-broadcast-tower"></i>
+            {% else %}
+                <i class="fas fa-times"></i>
+            {%  endif %}
+        </td>
+        <td device-data-signal>{{device.signal|default_if_none:"--"}}дБ</td>
+        <td device-data-temperature>{{device.last_temperature|default_if_none:"--"}} °C</td>
+        <td device-data-humidity>{{device.last_humidity|default_if_none:"--"}} %</td>
+        <td device-data-switch>
+            {% if device.switch %}
+                <i class="fas fa-plug"></i>
+            {% else %}
+                <i class="far fa-times-circle"></i>
+            {%  endif %}
+        </td>
+        <td device-data-last>
+            {% if device.is_online %}
+                {{device.date_of_modify|localtime|default_if_none:"--"}}
+            {% else %}
+                {{device.last_on_line|localtime|default_if_none:"--"}}
+            {% endif %}
+        </td>
+        <td>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_info' device.pk %}"><i class="fas fa-info"></i></a></div>
+                    <div class="col-sm"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_graph' device.pk %}"><i class="fas fa-chart-bar"></i></a></div>
+                </div>
+            </div>
+        </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="9">Нет данных</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% paging_navigation page params %}
+<script src="{% static 'devices/base.js' %}"></script>
+{% endblock %}

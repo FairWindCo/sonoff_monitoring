@@ -1,0 +1,220 @@
+{% extends 'devices/base_template.html' %}
+{% load static %}
+{% load fw_tags %}
+{% load tz %}
+
+{% block page_title%}
+    <a class="blog-header-logo text-light" href="{% url 'device_info' device.pk %}?{% param_replace params %}">Устройство {{ device.name }}</a>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="row py-2 noprint">
+          <div class='col-sm '>
+                    <button class="btn btn_main" onclick="moveBack()"><i class="fas fa-backward"></i></button>
+                    <button class="btn btn_main" onclick="printit()"><i class="fas fa-print"></i></button>
+          </div>
+          <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_graph' device.pk %}"><i class="fas fa-chart-bar"></i></a></div>
+          <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'list_values' device.pk %}"><i class="fas fa-table"></i></a></div>
+    </div>
+    <div class="row py-2">
+        <div class="col-3 col-sm-6 col-md-3">
+            Название
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{ device.name }}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Идентификатор устройства
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{ device.device_id }}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Модель
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.model|default_if_none:"--"}}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Тип датчика
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.sensor_type|default_if_none:"--"}}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Активность
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {% if device.is_online %}
+                <i class="fas fa-broadcast-tower"></i>Активно
+            {% else %}
+                <i class="fas fa-times"></i>Выключено
+            {%  endif %}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Мощность сигнала
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.signal|default_if_none:"--"}}дБ
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Версия прошивки
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.firmware|default_if_none:"--"}}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            MAC адресс
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.mac|default_if_none:"--"}}
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Температура
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.last_temperature|default_if_none:"--"}} °C
+                    {% if device.temperature_status == 1%}
+                        <i class="far fa-bell"></i><i class="fas fa-temperature-low"></i>
+                    {% elif device.temperature_status == 2%}
+                        <i class="far fa-bell"></i><i class="fas fa-temperature-high"></i>
+                    {% elif device.temperature_status == 3%}
+                        <i class="fas fa-exclamation-triangle"></i><i class="fas fa-temperature-low"></i>
+                    {% elif device.temperature_status == 4%}
+                        <i class="fas fa-exclamation-triangle"></i><i class="fas fa-temperature-high"></i>
+                    {% endif %}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Влажность
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.last_humidity|default_if_none:"--"}} %
+                    {% if device.humidity_status == 1 or device.humidity_status == 2 %}
+                        <i class="far fa-bell"></i>
+                    {% elif device.humidity_status == 3 or device.humidity_status == 4 %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% endif %}
+        </div>
+    </div>
+    <div class="row py-2">
+        <div class="col-3 col-sm-6 col-md-3">
+            Время последнего включения
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {{device.last_on_line|localtime|default_if_none:"--"}}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Время последнего выключения
+        </div>
+        <div class="col-3">
+            {{device.last_off_line|localtime|default_if_none:"--"}}
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Состояние реле
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            {% if device.switch %}
+                <i class="fas fa-plug"></i>ВКЛ
+            {% else %}
+                <i class="far fa-times-circle"></i>ВЫКЛ
+            {%  endif %}
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Время последнего обновления данных
+        </div>
+        <div class="col-3">
+            {{device.date_of_modify|localtime|default_if_none:"--"}}
+        </div>
+    </div>
+    <div class="row py-2">
+        <div class="col-3 col-sm-6 col-md-3">
+            Нижний порог срабатывания тревоги по температуре
+        </div>
+        <div class="col-3">
+            {{device.temperature_minimal_alarm_value|default_if_none:"--"}}  °C
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Нижний порог срабатывания тревоги по влажности
+        </div>
+        <div class="col-3">
+            {{device.humidity_minimal_alarm_value|default_if_none:"--"}}  °C
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Нижний порог срабатывания предуприждения по температуре
+        </div>
+        <div class="col-3">
+            {{device.temperature_minimal_warning_value|default_if_none:"--"}} °C
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Нижний порог срабатывания предуприждения по влажности
+        </div>
+        <div class="col-3">
+            {{device.humidity_minimal_warning_value|default_if_none:"--"}} %
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Верхний порог срабатывания предуприждения  по температуре
+        </div>
+        <div class="col-3">
+            {{device.temperature_maximal_warning_value|default_if_none:"--"}}  °C
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Верхний порог срабатывания предуприждения по влажности
+        </div>
+        <div class="col-3">
+            {{device.humidity_maximal_warning_value|default_if_none:"--"}}  %
+        </div>
+
+        <div class="col-3 col-sm-6 col-md-3">
+            Верхний порог срабатывания тревоги по температуре
+        </div>
+        <div class="col-3">
+            {{device.temperature_maximal_alarm_value|default_if_none:"--"}}  °C
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Верхний порог срабатывания тревоги по влажности
+        </div>
+        <div class="col-3">
+            {{device.humidity_maximal_alarm_value|default_if_none:"--"}}  %
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Значение гистерезиса по температуре
+        </div>
+        <div class="col-3">
+            {{device.temperature_histeresis_value|default_if_none:"--"}}  °C
+        </div>
+        <div class="col-3 col-sm-6 col-md-3">
+            Значение гистерезиса по влажности
+        </div>
+        <div class="col-3">
+            {{device.humidity_histeresis_value|default_if_none:"--"}}  %
+        </div>
+    </div>
+</div>
+<script language="Javascript">
+            function printit(){
+                window.print() ;
+            }
+            function printit2(){
+                window.print() ;
+                window.close();
+            }
+            function moveBack(){
+                if(window.history.length>1){
+                    window.history.go(-1);
+                } else {
+                    window.close();
+                }
+                return false;
+            }
+</script>
+{% endblock %}
+
