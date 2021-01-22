@@ -13,10 +13,10 @@
     <form method="post">
     {% csrf_token %}
     <div class="row py-2">
-        <div class="col-3">
+        <div class="col-2">
             Устройств на страницу
         </div>
-        <div class="col-3">
+        <div class="col-2">
              <!--<select name='per_page' onchange="set_per_page(value)"> -->
              <select name='per_page'>
                  {% for index in per_page_values %}
@@ -26,10 +26,16 @@
                  {% endfor %}
              </select>
         </div>
-        <div class="col-3">
+        <div class="col-2">
+            Только активные
+        </div>
+        <div class="col-2">
+            <input type="checkbox" name="checkbox_active_only" {% if params.checkbox_active_only == 'on' %}checked{% endif %}/>
+        </div>
+        <div class="col-2">
             Время обновления
         </div>
-        <div class="col-3">
+        <div class="col-2">
             <select onchange="data_refresh(value,'{% url 'ajax_list_devices'%}', {'page':'{{ page_num}}',
                 'per_page':'{{ per_page}}'})">
                  <option value="-1">Нет</option>
@@ -80,7 +86,7 @@
   <tbody>
     {% for device in devices %}
 
-        <tr device-data-id="{{device.id}}" class="alert 
+        <tr device-data-id="{{device.id}}" class="alert
             {% if not device.is_online %} alert-secondary
             {% elif device.humidity_status == 0 and device.temperature_status == 0 %} alert-success
             {% elif device.humidity_status == 1 or device.temperature_status == 1 %} alert-warning
