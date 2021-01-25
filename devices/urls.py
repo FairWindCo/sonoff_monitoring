@@ -1,10 +1,11 @@
 from django.urls import path
 
 from devices.views import list_device_status_ajax, device_history, list_device_status, device_status, \
-    list_device_offline, device_graph, device_info, list_values, list_group_device, group_status_ajax
+    list_device_offline, device_graph, device_info, list_values, list_group_device, group_status_ajax, device_gaudge
 
 urlpatterns = [
     path('status/', device_status, name='status'),
+    path('gaudge/', device_gaudge, name='gaudge'),
     path('list/', list_device_status, name='list_devices'),
     path('offline/', list_device_offline, name='list_device_offline'),
     path('ajax_list/', list_device_status_ajax, name='ajax_list_devices'),
@@ -17,6 +18,5 @@ urlpatterns = [
     path('group-<int:device_group_id>/', list_group_device, name='list_group_device'),
     path('ajaxgroup-<int:group_id>/', group_status_ajax, name='group_status_ajax'),
     path('ajaxgroup/', list_device_status_ajax, name='group_status_ajax'),
-
-
+    path('', list_device_status),
 ]

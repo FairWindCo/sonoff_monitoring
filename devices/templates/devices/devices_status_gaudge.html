@@ -1,0 +1,149 @@
+{% extends 'devices/base_template.html' %}
+{% load fw_tags %}
+{% load static %}
+{% load tz %}
+
+{% block page_title %}
+    <a class="blog-header-logo text-light" href="{% url 'list_devices' %}?{% param_replace params %}">Состояние
+        устройств</a>
+{% endblock %}
+
+
+{% block content %}
+    <div class="container">
+        <div class="row py-2">
+            <div class="col-3">
+                Время обновления
+            </div>
+            <div class="col-3">
+                <select onchange="data_gaudge_refresh(value,'{% url 'ajax_list_devices' %}', {'page':'{{ page_num }}',
+                        'per_page':'{{ per_page }}'})">
+                    <option value="-1">Нет</option>
+                    <option value="10000">10 сек</option>
+                    <option value="60000">1 мин</option>
+                    <option value="300000">5 мин</option>
+                    <option value="600000">10 мин</option>
+                    <option value="3600000">1 час</option>
+                </select>
+            </div>
+            <div class="col-3">
+                Скрыть не активные
+            </div>
+            <div class="col-3">
+                <input type="checkbox" id="hide_offline" onchange="hide_offline_blocks()"/>
+            </div>
+        </div>
+    </div>
+
+    <div class="container ">
+        <div class="row py-2">
+            {% for device in devices %}
+                <div class="col-6" device-data-id="{{ device.id }}">
+                    <div class="row py-2 panel-gaudge">
+                        <div class="col-6 col-gaudge" >
+                            <canvas id="DEV_{{ device.id }}_TEMP" width="201" height="201">No canvas in your browser...sorry...</canvas>
+                        </div>
+                        <div class="col-6 col-gaudge">
+                            <canvas id="DEV_{{ device.id }}_HOM" width="201" height="201">No canvas in your browser...sorry...</canvas>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div>Нет данных</div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    {% paging_navigation page params %}
+    <script src="{% static 'devices/base.js' %}"></script>
+    <script src="{% static 'devices/tween-min.js' %}"></script>
+    <script src="{% static 'devices/steelseries-min.js' %}"></script>
+    <script>
+        function get_section(element){
+            const sections = [];
+                if(element.minimal_alarm_value === undefined){
+                    element.minimal_alarm_value = -10;
+                } else {
+                    sections.push(steelseries.Section(-10, parseFloat(element.minimal_alarm_value), 'rgb(103,9,129)'))
+                }
+                if(element.minimal_warning_value !== undefined){
+                    sections.push(steelseries.Section(parseFloat(element.minimal_alarm_value), parseFloat(element.minimal_warning_value), 'rgb(82,56,153)'))
+                }
+                if(element.maximal_alarm_value === undefined){
+                    element.maximal_alarm_value = 90;
+                } else {
+                    sections.push(steelseries.Section(parseFloat(element.maximal_alarm_value), 90, 'rgb(126,3,27)'))
+                }
+                if(element.maximal_warning_value !== undefined){
+                    sections.push(steelseries.Section(parseFloat(element.maximal_warning_value), parseFloat(element.maximal_alarm_value), 'rgb(221,135,8)'))
+                }
+                if(element.minimal_warning_value !== undefined && element.maximal_warning_value !== undefined) {
+                    sections.push(steelseries.Section(parseFloat(element.minimal_warning_value), parseFloat(element.maximal_warning_value), 'rgb(43,141,6)'))
+                }
+
+            return sections;
+        }
+        let dev_id = [];
+
+        function init() {
+            const areas = [steelseries.Section(75, 90, 'rgba(220, 0, 0, 0.3)')];
+            {% for device in devices %}
+                dev_id.push({
+                        'id': 'DEV_{{device.id}}',
+                        'value_temp': '{{device.last_temperature}}',
+                        'value_hom': '{{device.last_humidity}}',
+                        'name': '{{ device.name }}',
+                        'temperature': {
+                            'minimal_alarm_value': '{{ device.temperature_minimal_alarm_value|default_if_none:'undefined' }}',
+                            'minimal_warning_value': '{{ device.temperature_minimal_warning_value|default_if_none:'undefined' }}',
+                            'maximal_warning_value': '{{ device.temperature_maximal_warning_value|default_if_none:'undefined' }}',
+                            'maximal_alarm_value': '{{ device.temperature_maximal_alarm_value|default_if_none:'undefined' }}'
+                        },
+                        'humidity': {
+                            'minimal_alarm_value': '{{ device.humidity_minimal_alarm_value|default_if_none:'undefined' }}',
+                            'minimal_warning_value': '{{ device.humidity_minimal_warning_value|default_if_none:'undefined' }}',
+                            'maximal_warning_value': '{{ device.humidity_maximal_warning_value|default_if_none:'undefined' }}',
+                            'maximal_alarm_value': '{{ device.humidity_maximal_alarm_value|default_if_none:'undefined' }}'
+                        }
+                    }
+                );
+
+            {% endfor %}
+            dev_id.forEach(element => {
+                 let temp_g = new steelseries.Radial(element.id+'_TEMP', {
+                    gaugeType: steelseries.GaugeType.TYPE4,
+                    size: 201,
+                    section: get_section(element.temperature),
+                    //area: areas,
+                    titleString: element.name,
+                    unitString: "t °C",
+                    threshold: element.temperature.maximal_alarm_value,
+                    lcdVisible: true,
+                    minValue:-10,
+                    maxValue:90
+                });
+                temp_g.setValue(element.value_temp);
+                devices_temp[element.id] = temp_g;
+                let hom_g = new steelseries.Radial(element.id+'_HOM', {
+                    gaugeType: steelseries.GaugeType.TYPE10,
+                    size: 201,
+                    section: get_section(element.humidity),
+                    //area: areas,
+                    titleString: element.name,
+                    unitString: "h %",
+                    threshold: element.humidity.maximal_alarm_value,
+                    lcdVisible: true,
+                    minValue:0,
+                    maxValue:80,
+                    value: element.value_temp,
+                    backgroundColor: steelseries.BackgroundColor.BEIGE
+                });
+                hom_g.setValue(element.value_hom)
+                devices_hom[element.id] = hom_g;
+            });
+        }
+
+        $(document).ready(init());
+    </script>
+{% endblock %}

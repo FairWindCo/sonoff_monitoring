@@ -25,13 +25,19 @@
                  <option value="3600000">1 час</option>
              </select>
         </div>
+        <div class="col-3">
+            Скрыть не активные
+        </div>
+        <div class="col-3">
+            <input type="checkbox" id="hide_offline" onchange="hide_offline_blocks()"/>
+        </div>
     </div>
     </div>
 
-<div class="container">
-    <div class="row py-2">
+<div class="container ">
+    <div class="row py-2 my_container">
         {% for device in devices %}
-        <div class="col" device-data-id="{{device.id}}">
+        <div class="my_col" device-data-id="{{device.id}}">
             <div class="alert
             {% if not device.is_online %} alert-secondary
             {% elif device.humidity_status == 0 and device.temperature_status == 0 %} alert-success
@@ -41,7 +47,15 @@
             {% elif device.humidity_status == 4 or device.temperature_status == 4 %} alert-danger
             {% endif %}
             " role="alert">
-                <h4 class="alert-heading">{{device.name}}</h4>
+                <h4 class="alert-heading">{{device.name}}
+                    <span device-data-on_line>
+                                {% if device.is_online %}
+                                    <i class="fas fa-broadcast-tower"></i>
+                                {%  else %}
+                                    <i class="fas fa-times"></i>
+                                {% endif %}
+                    </span>
+                </h4>
                 <p device-data-temperature>{{device.last_temperature|default_if_none:"--"}} °C
                     {% if device.temperature_status == 1%}
                         <i class="far fa-bell"></i><i class="fas fa-temperature-low"></i>
@@ -65,16 +79,17 @@
                 <p class="mb-0">{{device.device_id}}</p>
             <div class="container">
                 <div class="row">
-                    <div class="col-sm-6">
+                    <div class="col-sm-12">
                     {% if device.is_online %}
                         {{device.date_of_modify|localtime|default_if_none:"--"}}
                     {% else %}
                         {{device.last_on_line|localtime|default_if_none:"--"}}
                     {% endif %}
                     </div>
-                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_info' device.pk %}"><i class="fas fa-info"></i></a></div>
-                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'device_graph' device.pk %}"><i class="fas fa-chart-bar"></i></a></div>
-                    <div class="col-sm-2"><a style="width: 100%" class="btn btn-secondary" role="button" href="{% url 'list_values' device.pk %}"><i class="fas fa-table"></i></a></div>
+                </div><div class="row">
+                    <div class="col-sm-4"><a  class="btn btn-secondary" role="button" href="{% url 'device_info' device.pk %}"><i class="fas fa-info"></i></a></div>
+                    <div class="col-sm-4"><a  class="btn btn-secondary" role="button" href="{% url 'device_graph' device.pk %}"><i class="fas fa-chart-bar"></i></a></div>
+                    <div class="col-sm-4"><a  class="btn btn-secondary" role="button" href="{% url 'list_values' device.pk %}"><i class="fas fa-table"></i></a></div>
                 </div>
             </div>
             </div>

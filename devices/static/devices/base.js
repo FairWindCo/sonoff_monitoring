@@ -3,6 +3,58 @@ function set_per_page(number, url){
     window.location.href = url;
 }
 
+function hide_offline_blocks(){
+    const hide_offline_element = $('#hide_offline');
+    const hide_offline = hide_offline_element?hide_offline_element.is(':checked'):false;
+    if(hide_offline){
+        $('[device-data-id] .alert-secondary').hide();
+    } else {
+        $('[device-data-id] .alert-secondary').show();
+    }
+}
+var devices_temp = {};
+var devices_hom = {};
+function data_gaudge_refresh(timeout, url, params_data) {
+    console.log(url);
+    if(timeout <= 0 && data_gaudge_refresh.hasOwnProperty('data_gaudge_refresh')){
+        clearTimeout(data_gaudge_refresh.refresh_timer);
+    }
+
+    delete data_gaudge_refresh.refresh_timer;
+
+    $.ajax(url, {
+        'data':params_data,
+        'success':function (data, status) {
+            if(Array.isArray(data)){
+                const hide_offline_element = $('#hide_offline');
+                const hide_offline = hide_offline_element?hide_offline_element.is(':checked'):false;
+                for (index in data){
+                    if(data[index].hasOwnProperty('id')){
+                        let gaudge = devices_temp['DEV_'+data[index].id];
+                        if(gaudge !== undefined){
+                            gaudge.setValue(data[index]['temperature'])
+                        }
+                        gaudge = devices_hom['DEV_'+data[index].id];
+                        if(gaudge !== undefined){
+                            gaudge.setValue(data[index]['humidity'])
+                        }
+                        if(hide_offline && !data[index]['on_line']){
+                            $('[device-data-id='+data[index].id+']').hide();
+                        } else {
+                            $('[device-data-id='+data[index].id+']').show();
+                        }
+                    }
+                }
+            } else {
+                console.log('ERROR DATA:', data)
+            }
+            if(timeout>0) {
+                data_gaudge_refresh.refresh_timer=setTimeout(data_gaudge_refresh, timeout, timeout, url, params_data);
+            }
+        }
+    });
+}
+
 function data_refresh(timeout, url, params_data) {
     console.log(url);
     if(timeout <= 0 && data_refresh.hasOwnProperty('refresh_timer')){
@@ -15,6 +67,8 @@ function data_refresh(timeout, url, params_data) {
         'data':params_data,
         'success':function (data, status) {
             if(Array.isArray(data)){
+                const hide_offline_element = $('#hide_offline');
+                const hide_offline = hide_offline_element?hide_offline_element.is(':checked'):false;
                 for (index in data){
                     if(data[index].hasOwnProperty('id')){
                         dev_row=$('[device-data-id='+data[index].id+']');
@@ -99,6 +153,7 @@ function data_refresh(timeout, url, params_data) {
                                             value = '<i class="fas fa-broadcast-tower"></i>';
                                         } else {
                                             value = '<i class="fas fa-times"></i>';
+                                            d_status = 3;
                                         }
                                     }
 
@@ -113,6 +168,7 @@ function data_refresh(timeout, url, params_data) {
                         if(alert_element && alert_element.length>0){
                             alert_element.removeAttr('class');
                             alert_element.addClass('alert');
+                            alert_element.show();
                             if(d_status==0){
                                 alert_element.addClass('alert-success');
                             } else if (d_status == 1){
@@ -121,6 +177,9 @@ function data_refresh(timeout, url, params_data) {
                                 alert_element.addClass('alert-danger');
                             } else if (d_status == 3){
                                 alert_element.addClass('alert-secondary');
+                                if(hide_offline){
+                                    alert_element.hide();
+                                }
                             }
                         }
                     }

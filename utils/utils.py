@@ -5,14 +5,26 @@ from django.template.response import TemplateResponse
 
 
 def search(request, db_model_class, request_param_name, db_field_name, params_dic):
-    if request_param_name in request.POST and request.POST[request_param_name]:
-        params_dic[request_param_name] = request.POST[request_param_name]
-        return db_model_class.filter(**{db_field_name: request.POST[request_param_name]})
-    elif request_param_name in request.GET and request.GET[request_param_name]:
-        params_dic[request_param_name] = request.GET[request_param_name]
-        return db_model_class.filter(**{db_field_name: request.GET[request_param_name]})
+    if request_param_name.startswith('checkbox'):
+        if request_param_name in request.POST and request.POST[request_param_name]:
+            params_dic[request_param_name] = request.POST[request_param_name]
+            value = True if request.POST[request_param_name] == 'on' else False
+            return db_model_class.filter(**{db_field_name: value})
+        elif request_param_name in request.GET and request.GET[request_param_name]:
+            params_dic[request_param_name] = request.GET[request_param_name]
+            value = True if request.GET[request_param_name] == 'on' else False
+            return db_model_class.filter(**{db_field_name: value})
+        else:
+            return db_model_class
     else:
-        return db_model_class
+        if request_param_name in request.POST and request.POST[request_param_name]:
+            params_dic[request_param_name] = request.POST[request_param_name]
+            return db_model_class.filter(**{db_field_name: request.POST[request_param_name]})
+        elif request_param_name in request.GET and request.GET[request_param_name]:
+            params_dic[request_param_name] = request.GET[request_param_name]
+            return db_model_class.filter(**{db_field_name: request.GET[request_param_name]})
+        else:
+            return db_model_class
 
 
 def paginate(request, objects):
@@ -22,7 +34,7 @@ def paginate(request, objects):
         per_page = request.GET.get('per_page', '10')
 
     if per_page.isdigit():
-        per_page=int(per_page)
+        per_page = int(per_page)
     else:
         per_page = 10
     paginator = Paginator(objects, per_page)
@@ -86,7 +98,7 @@ def get_attribute_from_context(context, attribute_path, need_clean=True):
         for attr in attributes:
             if context:
                 if hasattr(context, attr):
-                    d = getattr(context, attr,{})
+                    d = getattr(context, attr, {})
                 elif attr in context:
                     d = context[attr]
                 else:
@@ -102,7 +114,6 @@ def get_attribute_from_context(context, attribute_path, need_clean=True):
 
 
 def create_clean_copy(iterable_element):
-
     if type(iterable_element) == str:
         d = iterable_element
     elif isinstance(iterable_element, dict):
@@ -117,14 +128,14 @@ def create_clean_copy(iterable_element):
     return d
 
 
-def get_request_param(request, name, default=None, types=['GET','POST'], empty_as_default=True):
+def get_request_param(request, name, default=None, types=['GET', 'POST'], empty_as_default=True):
     result = default
     for type_ in types:
         if hasattr(request, type_):
-            object_=getattr(request,type_)
+            object_ = getattr(request, type_)
             if name in object_:
                 result = object_[name]
                 if not result and empty_as_default:
-                    result=default
+                    result = default
                 break
     return result

@@ -92,10 +92,10 @@ class Sonoff():
             headers=self._headers, json=app_details)
 
         resp = r.json()
-
+        # print(resp)
         # get a new region to login
         if 'error' in resp and 'region' in resp and resp['error'] == HTTP_MOVED_PERMANENTLY:
-            self._api_region    = resp['region']
+            self._api_region = resp['region']
 
             _LOGGER.warning("found new region: >>> %s <<< (you should change api_region option to this value in configuration.yaml)", self._api_region)
 
@@ -154,10 +154,11 @@ class Sonoff():
             _LOGGER.info("Grace period active")            
             return self._devices
 
-        r = requests.get('https://{}-api.coolkit.cc:8080/api/user/device'.format(self._api_region), 
-            headers=self._headers)
-
+        r = requests.get('https://{}-api.coolkit.cc:8080/api/user/device'.format(self._api_region),
+            headers=self._headers, params={'getTags': 1, 'appid': 'oeVkj2lYFGnJu5XUtWisfW4utiN4u9Mq', 'nonce': '1606229269', 'ts': 1606229269, 'version': 8})
+        #print(self._headers)
         resp = r.json()
+        #print(resp)
         if 'error' in resp and resp['error'] in [HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED]:
             # @IMPROVE add maybe a service call / switch to deactivate sonoff component
             if self.is_grace_period():
@@ -177,7 +178,7 @@ class Sonoff():
         if force_update: 
             return self.update_devices()
 
-        return self._devices
+        return self._devices['devicelist']
 
     def get_device(self, deviceid):
         for device in self.get_devices():
@@ -204,7 +205,7 @@ class Sonoff():
                 payload = {
                     'action'    : "userOnline",
                     'userAgent' : 'app',
-                    'version'   : 6,
+                    'version'   : 8,
                     'nonce'     : gen_nonce(15),
                     'apkVesrion': "1.8",
                     'os'        : 'ios',
