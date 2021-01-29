@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'bootstrap4',
     'bootstrap_datepicker_plus',
     'devices',
-    'utils'
+    'utils',
+    'vue_utils'
 ]
 
 MIDDLEWARE = [

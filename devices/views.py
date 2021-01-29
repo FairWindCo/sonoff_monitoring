@@ -30,8 +30,42 @@ def form_ajax_response(request, device_objects):
     return JsonResponse(status, safe=False)
 
 
+def form_ajax_response_ex(request, device_objects, count):
+    devices, *_ = paginate(request, device_objects)
+    status = []
+    for device in devices:
+        status.append({
+            'id': device.id,
+            'on_line': device.is_online,
+            'name': device.name,
+            'temperature': device.last_temperature,
+            'humidity': device.last_humidity,
+            'switch': device.switch,
+            'last': formats.date_format(timezone.localtime(device.date_of_modify),
+                                        'd M Y H:i:s') if device.is_online else formats.date_format(
+                timezone.localtime(device.last_off_line), 'd M Y H:i:s'),
+            'status_temp': device.temperature_status,
+            'status_hum': device.humidity_status,
+        })
+    return JsonResponse({
+        'list': status,
+        'count': count
+    }, safe=False)
+
+
 def list_device_status_ajax(request):
     return form_ajax_response(request, SonoffDevices.objects.all().order_by('pk'))
+
+
+def list_filtered_device_status_ajax(request):
+    devices = SonoffDevices.objects.all()
+    devices_count = devices.count()
+    if request.GET and request.GET['is_online'] == 'true':
+        devices = devices.filter(is_online=True)
+    if request.GET and request.GET['search_name'] and request.GET['search_name'] != 'undefined':
+        devices = devices.filter(name__icontains=request.GET['search_name'])
+
+    return form_ajax_response_ex(request, devices.order_by('pk'), devices_count)
 
 
 def group_status_ajax(request, group_id=None):
@@ -156,7 +190,8 @@ def list_device_offline(request):
 
 
 def device_gaudge(request):
-    return request_paginator_form(request, 'devices/devices_status_gaudge.html', SonoffDevices.objects.all().order_by('pk'),
+    return request_paginator_form(request, 'devices/devices_status_gaudge.html',
+                                  SonoffDevices.objects.all().order_by('pk'),
                                   result_field_name='devices',
                                   search_attributes={'id': 'device_id__icontains',
                                                      'name': 'name__icontains'})
