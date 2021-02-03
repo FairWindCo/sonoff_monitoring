@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 # Create your views here.
 from django.template.response import TemplateResponse
 from django.utils import formats
@@ -113,6 +113,49 @@ def device_info(request, device_id):
     return TemplateResponse(request, 'devices/devices_info.html', context={'device': device})
 
 
+def get_list_values_data(request, id, date_format='%m/%d/%Y %I:%M %p'):
+    device = SonoffDevices.objects.get(pk=id)
+    device_values = []
+    current_date = timezone.localtime() + timedelta(minutes=1)
+    before_date = current_date - timedelta(days=1)
+    from_date = get_request_param(request, 'from_date', before_date.strftime(date_format))
+    end_date = get_request_param(request, 'end_date', current_date.strftime(date_format))
+
+    if device:
+        f_date = timezone.datetime.strptime(from_date, date_format)
+        t_date = timezone.datetime.strptime(end_date, date_format)
+
+        device_values = device.values.filter(date_of_modify__range=(f_date, t_date)).order_by('date_of_modify')
+    return device_values, from_date, end_date, device
+
+
+def device_graph_ex(request):
+    if 'id' in request.GET:
+        return JsonResponse(get_list_values_data(request, request.GET['id']), safe=False)
+    return HttpResponse(status=500)
+
+
+def list_values_ex(request):
+    if 'id' in request.GET:
+        device_values, from_date, end_date, device = get_list_values_data(request, request.GET['id'],
+                                                                          # '%a %b %d %Y %H:%M:%S GMT%z'
+                                                                          # '%m/%d/%Y %I:%M'
+                                                                          '%Y-%m-%dT%H:%M:%S.%fZ'
+                                                                          )
+        result = {
+            'values': [{'temp': val.temperature,
+                        'hom': val.humidity,
+                        'sw': val.switch,
+                        'date': val.date_of_modify.strftime("%m/%d/%Y %H:%M:%S")
+                        } for val in device_values],
+            'from_value': from_date,
+            'end_value': end_date,
+            'name': device.name
+        }
+        return JsonResponse(result, safe=False)
+    return HttpResponse(status=500)
+
+
 def device_graph(request, device_id):
     device = SonoffDevices.objects.get(pk=device_id)
     device_values = []
@@ -147,19 +190,8 @@ def device_graph(request, device_id):
 
 
 def list_values(request, device_id):
-    device = SonoffDevices.objects.get(pk=device_id)
-    device_values = []
     per_page_values = [1, 10, 25, 50, 100]
-    current_date = timezone.localtime() + timedelta(minutes=1)
-    before_date = current_date - timedelta(days=1)
-    from_date = get_request_param(request, 'from_date', before_date.strftime('%m/%d/%Y %I:%M %p'))
-    end_date = get_request_param(request, 'end_date', current_date.strftime('%m/%d/%Y %I:%M %p'))
-
-    if device:
-        f_date = timezone.datetime.strptime(from_date, '%m/%d/%Y %I:%M %p')
-        t_date = timezone.datetime.strptime(end_date, '%m/%d/%Y %I:%M %p')
-
-        device_values = device.values.filter(date_of_modify__range=(f_date, t_date)).order_by('date_of_modify')
+    device_values, from_date, end_date, device = get_list_values_data(request, device_id)
 
     return request_paginator_form(request, 'devices/list_values.html',
                                   device_values,

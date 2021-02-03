@@ -66,10 +66,11 @@
             </el-aside>
             <el-container>
                 <el-main>
-                    <transition name="el-fade-in">
-                        <component :is="current_tab" :device_data="device_data"></component>
-                    </transition>
-
+                    <component :is="current_tab"
+                               :device_data="device_data"
+                               @view-table="show_table"
+                               @view-graph="show_chart">
+                    </component>
                     <el-pagination
                             background
                             layout="total, prev, pager, next"
@@ -85,14 +86,92 @@
     </el-container>
 
     <el-dialog
-            title="Tips"
+            title="Просмотр истории измерений"
             v-model="dialogVisible"
-            width="30%"
-            :before-close="handleClose">
-        <span>Просмотр истории</span>
+            width="40%">
+        <el-row>
+            <el-col :span="4">
+                <span class="demonstration">От</span>
+            </el-col>
+            <el-col :span="8">
+                <el-date-picker
+                        format="MM/DD/YYYY HH:mm:ss ZZ"
+                        v-model="start_value"
+                        type="datetime"
+                        placeholder="Select date and time">
+                </el-date-picker>
+            </el-col>
+
+            <el-col :span="4">
+                <span class="demonstration">До</span>
+            </el-col>
+            <el-col :span="8">
+                <el-date-picker
+                        format="MM/DD/YYYY HH:mm:ss ZZ"
+                        v-model="end_value"
+                        type="datetime"
+                        placeholder="Select date and time">
+                </el-date-picker>
+            </el-col>
+        </el-row>
+        <h6>История измерений по устройству: @{one_device_name}@</h6>
+        <el-table :data="device_data_list" style="width: 100%">
+            <el-table-column prop="temp" label="Температура"></el-table-column>
+            <el-table-column prop="hom" label="Влажность"></el-table-column>
+            <el-table-column prop="sw" label="Ключ">
+                <template #default="scope">
+                    <status :status="scope.row.sw"></status>
+                </template>
+            </el-table-column>
+            <el-table-column prop="date" label="Дата"></el-table-column>
+        </el-table>
         <template #footer>
             <span class="dialog-footer">
-              <el-button type="primary" @click="dialogVisible = false">OK</el-button>
+                <el-button type="primary" @click="show_table(this.element_id)">Обновить</el-button>
+                <el-button type="primary" @click="dialogVisible = false">OK</el-button>
+            </span>
+        </template>
+    </el-dialog>
+    <el-dialog
+            title="Тренд измерений"
+            v-model="chartDialogVisible"
+            width="40%">
+        <el-row>
+            <el-col :span="4">
+                <span class="demonstration">От</span>
+            </el-col>
+            <el-col :span="8">
+                <el-date-picker
+                        format="MM/DD/YYYY HH:mm:ss ZZ"
+                        v-model="start_value"
+                        type="datetime"
+                        placeholder="Select date and time">
+                </el-date-picker>
+            </el-col>
+
+            <el-col :span="4">
+                <span class="demonstration">До</span>
+            </el-col>
+            <el-col :span="8">
+                <el-date-picker
+                        format="MM/DD/YYYY HH:mm:ss ZZ"
+                        v-model="end_value"
+                        type="datetime"
+                        placeholder="Select date and time">
+                </el-date-picker>
+            </el-col>
+        </el-row>
+        <h6>Тренд измерений по устройству: @{one_device_name}@</h6>
+        <chart :datasets="this.chart_datas"
+               :titles="this.chart_titles"
+               :labels="this.chart_labels"
+                backgroundColor_1='rgba(255, 99, 132, 0.2)'
+                borderColor_1='rgba(255, 159, 64, 1)'>
+        </chart>
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button type="primary" @click="show_chart(this.element_id)">Обновить</el-button>
+                <el-button type="primary" @click="chartDialogVisible = false">OK</el-button>
             </span>
         </template>
     </el-dialog>
@@ -144,11 +223,13 @@
             justify-self: flex-end;
             flex-grow: 0;
         }
-        .params_show{
+
+        .params_show {
             line-height: 14px;
             text-align: left;
         }
-        .params_show li{
+
+        .params_show li {
             margin: 2px;
             padding: 5px;
         }
@@ -174,13 +255,184 @@
 
 {% block vue_app_init %}
     <script>
+        const GeneralChart = {
+            delimiters: ["@{", "}@"],
+            template: `
+                <canvas ref="canvas" :width="this.width" :height="this.height"></canvas>
+            `,
+            props: {
+                chartType: {
+                    default: 'line',
+                    type: String
+                },
+                datasets: {
+                    type: Array,
+                    default: [[]]
+                },
+                titles: {
+                    type: Array,
+                    default: ['']
+                },
+                labels: {
+                    default: [''],
+                    type: Array
+                },
+                line_colors: {
+                    default: [],
+                    type: Array
+                },
+                bar_colors: {
+                    default: [],
+                    type: Array
+                },
+                width: {
+                    default: 600,
+                    type: Number
+                },
+                height: {
+                    default: 300,
+                    type: Number
+                },
+            },
+
+            data() {
+                return {
+                    _chart: null,
+                }
+            },
+            mounted() {
+
+            },
+            watch: {
+                make_dataset: function (new_value) {
+                    console.log(new_value)
+                    this.main_render()
+                },
+            },
+            computed: {
+                make_dataset() {
+                    let data = []
+
+                    for (const index in this.titles) {
+                        const num = parseInt(index) + 1
+                        const backgroundColor = ('backgroundcolor_'+num in this.$attrs)? this.$attrs['backgroundcolor_'+num]:'rgba(22,95,150,0.2)'
+                        const borderColor = ('bordercolor_'+num in this.$attrs)? this.$attrs['bordercolor_'+num]:'rgb(10,35,79)'
+                        data.push({
+                            label: this.titles[index],
+                            data: this.datasets[index],
+                            backgroundColor: [
+                                backgroundColor
+                            ],
+                            borderColor: [
+                                borderColor
+                            ],
+                        })
+                    }
+                    return {
+                        labels: this.labels,
+                        datasets: data
+                    }
+                }
+            },
+            methods: {
+                generateLegend() {
+                    if (this.$data._chart) {
+                        return this.$data._chart.generateLegend()
+                    }
+                },
+
+                main_render() {
+                    let data = []
+
+                    for (const index in this.titles) {
+                        data.push({
+                            label: this.titles[index],
+                            data: this.datasets[index]
+                        })
+                    }
+
+                    this.renderChart(this.make_dataset, {
+                        scales: {
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }]
+                        }
+                    })
+                },
+
+                renderChart(data, options) {
+                    if (this._chart) this._chart.destroy()
+                    this._chart = new Chart(
+                        this.$refs.canvas.getContext('2d'), {
+                            type: this.chartType,
+                            data: data,
+                            options: options
+                        }
+                    )
+                }
+            },
+            beforeDestroy() {
+                if (this._chart) {
+                    this._chart.destroy()
+                }
+            }
+
+        }
+
+        const Indicator = {
+            delimiters: ["@{", "}@"],
+            props: ["status", "label"],
+            methods: {
+                get_tooltip() {
+                    result = 'Норма'
+                    if (this.status == 1) {
+                        result = 'Предупреждение по нижней границе'
+                    } else if (this.status == 2) {
+                        result = 'Предупреждение по верхней границе'
+                    } else if (this.status == 3) {
+                        result = 'Тревога по нижней границе'
+                    } else if (this.status == 4) {
+                        result = 'Тревога по верхней границе'
+                    }
+                    return result
+                }
+            },
+            template: `
+                        <el-tooltip class="item" effect="dark" :content="get_tooltip()" placement="bottom">
+                            <span>@{label}@
+                            <span v-if="status==3"><i class="el-icon-bell" style="color:red"></i><i class="el-icon-bottom"></i></span>
+                            <span v-if="status==1"><i class="el-icon-warning-outline" style="color:yellow"></i><i class="el-icon-bottom"></i></span>
+                            <span v-if="status==0"><i class="el-icon-s-opportunity" style="color:green"></i></span>
+                            <span v-if="status==2"><i class="el-icon-warning" style="color:yellow"></i><i class="el-icon-top"></i></span>
+                            <span v-if="status==4"><i class="el-icon-message-solid" style="color:red"></i><i class="el-icon-top"></i></span>
+                            </span>
+                        </el-tooltip>
+                    `
+        }
+        const Status = {
+            delimiters: ["@{", "}@"],
+            props: ["status", "label"],
+            methods: {
+                get_tooltip() {
+                    return (this.status != 1) ? 'Устройство не в сети' : 'Устройство в сети'
+                }
+            },
+            template: `
+                        <el-tooltip class="item" effect="dark" :content="get_tooltip()" placement="bottom">
+                            <span>@{label}@
+                                <i v-if="status==1" class="el-icon-success" style="color:green"></i>
+                                <i v-if="status==0" class="el-icon-error" style="color:red"></i>
+                            </span>
+                        </el-tooltip>
+                    `
+        }
         const APP_CONFIG = {
             delimiters: ["@{", "}@"],
             data() {
                 return {
                     activeIndex: '1',
-                    start_value: null,
-                    end_value: null,
                     per_page: 10,
                     total_count: 0,
                     page_index: 1,
@@ -189,27 +441,52 @@
                     checked_online: undefined,
                     selected_name: '',
                     current_tab: `tab-list`,
-                    dialogVisible: false
+
+                    start_value: null,
+                    end_value: null,
+                    one_device_name: '',
+                    device_data_list: [],
+                    dialogVisible: false,
+                    chartDialogVisible: false,
+                    element_id: null,
+                    chart_labels: [],
+                    chart_datas: [[], []],
+                    chart_titles: ['Температура', 'Влажность']
                 }
             },
             components: {
                 'tab-list': {
                     delimiters: ["@{", "}@"],
-                    props: ["device_data"],
+                    props: ["device_data", "open_dialog"],
+                    emits: ["view-graph", "view-table"],
                     template: `
                     <h5>Test Table</h5>
                     <el-table :data="device_data" style="width: 100%">
-                        <el-table-column prop="on_line" label="В сети">
+                        <el-table-column prop="on_line" label="В сети" width="70px">
                             <template #default="scope">
-                                <i v-bind:class="{ 'el-icon-success red': scope.row.on_line, 'el-icon-error': !scope.row.on_line}"  type="success"></i>
+                                <status :status="scope.row.on_line"></status>
                             </template>
                         </el-table-column>
                         <el-table-column prop="name" label="Имя устройства"></el-table-column>
                         <el-table-column prop="temperature" label="Температура"></el-table-column>
                         <el-table-column prop="humidity" label="Влажность"></el-table-column>
                         <el-table-column prop="last" label="Дата последнего обновения"></el-table-column>
-                        <el-table-column prop="status_temp" label="Статус температуры"></el-table-column>
-                        <el-table-column prop="status_hum" label="Статус влажности"></el-table-column>
+                        <el-table-column prop="status_temp" label="Статус температуры" width="100px">
+                            <template #default="scope">
+                                   <indicator :status="scope.row.status_temp"></indicator>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="status_hum" label="Статус влажности" width="100px">
+                            <template #default="scope">
+                                   <indicator :status="scope.row.status_hum"></indicator>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="status_hum" label="Действия">
+                            <template #default="scope">
+                                   <el-button type="success" icon="el-icon-s-data" circle @click="$emit('view-graph', scope.row.id)"></el-button>
+                                   <el-button type="success" icon="el-icon-notebook-2" circle @click="$emit('view-table', scope.row.id)"></el-button>
+                            </template>
+                        </el-table-column>
                     </el-table>
             `
                 },
@@ -227,9 +504,11 @@
                               </template>
                                 <div class="text item params_show">
                                     <ul>
-                                        <li>Сеть:<i v-bind:class="{ 'el-icon-success red': row.on_line, 'el-icon-error': !row.on_line}"  type="success"></i></li>
+                                        <li><status :status="row.on_line" label="Связь: "></status></li>
                                         <li>Температура @{ row.temperature }@</li>
                                         <li>Влажность @{ row.humidity }@</li>
+                                        <li><indicator :status="row.status_temp" label="Влажность: "></indicator></li>
+                                        <li><indicator :status="row.status_hum" label="Температура: "></indicator></li>
                                     </ul>
                                     @{ row.last }@
                                 </div>
@@ -240,6 +519,68 @@
                 }
             },
             methods: {
+                get_data_from_server(id, result_process) {
+                    console.log(id)
+                    this.element_id = id
+
+                    let params = {
+                        id: id,
+                    }
+                    if (this.start_value) {
+                        params['from_date'] = new Date(this.start_value).toISOString()
+                    }
+                    if (this.end_value) {
+                        params['end_date'] = new Date(this.end_value).toISOString()
+                    }
+
+                    fetch('{% url 'list_values_ex' %}?' + new URLSearchParams(params))
+                        .then((response) => {
+                            if (response.ok) {
+                                return response.json();
+                            }
+                            throw new Error('Network response was not ok');
+                        })
+                        .then((json) => {
+                            console.log(json)
+                            result_process(json)
+                        })
+                        .catch((error) => {
+                            this.$notify({
+                                title: 'ERROR',
+                                message: error,
+                                type: 'error'
+                            });
+                            console.log(error);
+                        });
+                },
+                show_chart(id) {
+                    console.log('chart', id)
+                    this.chartDialogVisible = true
+                    this.get_data_from_server(id, json => {
+                        this.start_value = json.from_value
+                        this.end_value = json.end_value
+                        this.one_device_name = json.name
+                        this.chart_labels = []
+                        this.chart_datas = [[], []]
+                        this.chart_titles = ['Температура', 'Влажность']
+
+                        for (const val of json.values) {
+                            this.chart_labels.push(val.date)
+                            this.chart_datas[0].push(val.temp)
+                            this.chart_datas[1].push(val.hom)
+                        }
+                    })
+                },
+                show_table(id) {
+                    this.dialogVisible = true
+                    this.get_data_from_server(id, json => {
+                        this.device_data_list = json.values
+                        this.start_value = json.from_value
+                        this.end_value = json.end_value
+                        this.one_device_name = json.name
+                    })
+
+                },
                 change() {
                     this.current_tab = comp_1
                 },
@@ -284,7 +625,11 @@
             }
 
         }
+
         const app = Vue.createApp(APP_CONFIG)
+        app.component('status', Status)
+        app.component('indicator', Indicator)
+        app.component('chart', GeneralChart)
         window.main_app = app;
         app.use(ElementPlus, {size: 'small', zIndex: 3000});
     </script>
