@@ -1,5 +1,9 @@
 {% extends 'vue_utils/vue_base_template.html' %}
 
+
+
+{% load static %}
+
 {% block main_content %}
     <el-container>
         <el-header>
@@ -254,7 +258,10 @@
 {% endblock %}
 
 {% block vue_app_init %}
-    <script>
+    <script type="module">
+        import "{%  static 'vue_utils/vue/vue.global.js' %}"
+        import "{%  static 'vue_utils/element_ui/js/index.full.js' %}"
+
         const GeneralChart = {
             delimiters: ["@{", "}@"],
             template: `
@@ -373,7 +380,7 @@
                     )
                 }
             },
-            beforeDestroy() {
+            beforeUnmount() {
                 if (this._chart) {
                     this._chart.destroy()
                 }
@@ -386,7 +393,7 @@
             props: ["status", "label"],
             methods: {
                 get_tooltip() {
-                    result = 'Норма'
+                    let result = 'Норма'
                     if (this.status == 1) {
                         result = 'Предупреждение по нижней границе'
                     } else if (this.status == 2) {
@@ -632,6 +639,9 @@
         app.component('chart', GeneralChart)
         window.main_app = app;
         app.use(ElementPlus, {size: 'small', zIndex: 3000});
+        app.mount('#APP')
     </script>
+{% endblock %}
+{% block vue_app %}
 {% endblock %}
 
