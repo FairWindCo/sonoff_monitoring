@@ -63,6 +63,8 @@ class SonoffDevices(models.Model):
 
     def set_humidity_value(self, value):
         status = self.NORMAL
+        if self.humidity_histeresis_value is None:
+            self.humidity_histeresis_value = 0
         if self.humidity_minimal_alarm_value is not None:
             if value <= self.humidity_minimal_alarm_value:
                 status = self.MIN_ALARM
@@ -96,6 +98,9 @@ class SonoffDevices(models.Model):
 
     def set_temperature_value(self, value):
         status = self.NORMAL
+        if self.temperature_histeresis_value is None:
+            self.temperature_histeresis_value = 0
+
         if self.temperature_minimal_alarm_value is not None:
             if value <= self.temperature_minimal_alarm_value:
                 status = self.MIN_ALARM

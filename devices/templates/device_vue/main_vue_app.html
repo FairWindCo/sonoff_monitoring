@@ -10,11 +10,10 @@
             <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" background-color="#545c64"
                      text-color="#fff"
                      active-text-color="#ffd04b">
-                <el-menu-item index="1">Система мониторинга</el-menu-item>
                 <el-submenu index="2">
                     <template #title>Список устройств</template>
-                    <el-menu-item index="2-1" @click="current_tab='tab-list'">item 1</el-menu-item>
-                    <el-menu-item index="2-2" @click="current_tab='tab-cards'">item 2</el-menu-item>
+                    <el-menu-item active index="2-1" @click="current_tab='tab-list'">Список</el-menu-item>
+                    <el-menu-item index="2-2" @click="current_tab='tab-cards'">Карточки</el-menu-item>
                 </el-submenu>
             </el-menu>
         </el-header>
@@ -312,7 +311,7 @@
             },
             watch: {
                 make_dataset: function (new_value) {
-                    console.log(new_value)
+                    console.log('watch',new_value)
                     this.main_render()
                 },
             },
@@ -370,14 +369,18 @@
                 },
 
                 renderChart(data, options) {
-                    if (this._chart) this._chart.destroy()
-                    this._chart = new Chart(
-                        this.$refs.canvas.getContext('2d'), {
-                            type: this.chartType,
-                            data: data,
-                            options: options
-                        }
-                    )
+                    try {
+                        if (this._chart) this._chart.destroy()
+                        this._chart = new Chart(
+                            this.$refs.canvas.getContext('2d'), {
+                                type: this.chartType,
+                                data: data,
+                                options: options
+                            }
+                        )
+                    } catch (e) {
+                        console.log(e)
+                    }
                 }
             },
             beforeUnmount() {
@@ -439,7 +442,7 @@
             delimiters: ["@{", "}@"],
             data() {
                 return {
-                    activeIndex: '1',
+                    activeIndex: '2-1',
                     per_page: 10,
                     total_count: 0,
                     page_index: 1,
